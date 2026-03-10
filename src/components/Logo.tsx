@@ -9,7 +9,7 @@ export const Logo: React.FC<LogoProps> = ({ className = "w-10 h-10" }) => {
     <img 
       src="/logo.png" 
       alt="Logo" 
-      className={`${className} object-contain transition-all duration-300 dark:invert-0 invert`}
+      className={`${className} object-contain transition-all duration-300`}
       referrerPolicy="no-referrer"
     />
   );

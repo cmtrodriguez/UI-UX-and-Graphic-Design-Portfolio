@@ -57,12 +57,21 @@ db.exec(`
 
 async function startServer() {
   const app = express();
-  const PORT = process.env.PORT || 3000;
+  const PORT = Number(process.env.PORT) || 3000;
 
   app.use(express.json());
   app.use("/uploads", express.static("uploads"));
 
   // API Routes
+  app.post("/api/verify-password", (req, res) => {
+    const { password } = req.body;
+    if (password === process.env.ADMIN_PASSWORD) {
+      res.json({ success: true });
+    } else {
+      res.status(401).json({ error: "Invalid password" });
+    }
+  });
+
   app.get("/api/projects", async (req, res) => {
     const isAdmin = req.query.admin === 'true';
 

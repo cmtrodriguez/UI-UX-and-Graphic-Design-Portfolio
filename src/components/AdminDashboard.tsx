@@ -44,9 +44,19 @@ export const AdminDashboard = () => {
     setProjects(data);
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoggedIn(true);
+    const res = await fetch('/api/verify-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password })
+    });
+
+    if (res.ok) {
+      setIsLoggedIn(true);
+    } else {
+      alert('Invalid admin password. Please check your environment variables.');
+    }
   };
 
   const handleAddProject = async (e: React.FormEvent) => {
