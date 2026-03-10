@@ -288,30 +288,44 @@ async function startServer() {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
+    // Check if email service is configured
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      console.error("Contact Form Error: EMAIL_USER or EMAIL_PASS environment variables are missing.");
+      return res.status(500).json({ 
+        error: "Email service not configured. Please add EMAIL_USER and EMAIL_PASS to your environment variables." 
+      });
+    }
+
     try {
-      // Configure transporter
-      // Note: For Gmail, you need to use an App Password if 2FA is enabled
+      // Configure transporter with a timeout
       const transporter = nodemailer.createTransport({
         service: "gmail",
+        host: "smtp.gmail.com",
+        port: 465,
+        secure: true,
         auth: {
           user: process.env.EMAIL_USER,
           pass: process.env.EMAIL_PASS,
         },
+        connectionTimeout: 10000, // 10 seconds timeout
       });
 
       const mailOptions = {
-        from: `"${name}" <${email}>`,
+        from: `"${name}" <${process.env.EMAIL_USER}>`, // Gmail often requires the 'from' to be the authenticated user
+        replyTo: email, // This allows you to click 'Reply' in your email to respond to the sender
         to: "rodriguez.cmt7@gmail.com",
         subject: subject || `New Contact Form Submission from ${name}`,
         text: `Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`,
         html: `
-          <h3>New Contact Form Submission</h3>
-          <p><strong>Name:</strong> ${name}</p>
-          <p><strong>Email:</strong> ${email}</p>
-          <p><strong>Subject:</strong> ${subject || 'N/A'}</p>
-          <br/>
-          <p><strong>Message:</strong></p>
-          <p>${message.replace(/\n/g, '<br/>')}</p>
+          <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+            <h2 style="color: #333;">New Contact Form Submission</h2>
+            <p><strong>Name:</strong> ${name}</p>
+            <p><strong>Email:</strong> ${email}</p>
+            <p><strong>Subject:</strong> ${subject || 'N/A'}</p>
+            <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+            <p><strong>Message:</strong></p>
+            <p style="white-space: pre-wrap; line-height: 1.6;">${message}</p>
+          </div>
         `,
       };
 
@@ -319,7 +333,13 @@ async function startServer() {
       res.json({ success: true });
     } catch (error) {
       console.error("Email sending error:", error);
-      res.status(500).json({ error: "Failed to send email. Please try again later." });
+      let msg = "Failed to send email.";
+      if (error.code === 'EAUTH') {
+        msg = "Email authentication failed. Please check your EMAIL_PASS (App Password).";
+      } else if (error.code === 'ETIMEDOUT') {
+        msg = "Connection timed out. Please try again.";
+      }
+      res.status(500).json({ error: msg });
     }
   });
 
