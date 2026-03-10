@@ -290,24 +290,24 @@ async function startServer() {
 
     // Check if email service is configured
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-      console.error("Contact Form Error: EMAIL_USER or EMAIL_PASS environment variables are missing.");
+      const missing = [];
+      if (!process.env.EMAIL_USER) missing.push("EMAIL_USER");
+      if (!process.env.EMAIL_PASS) missing.push("EMAIL_PASS");
+      
+      console.error(`Contact Form Error: Missing ${missing.join(", ")}`);
       return res.status(500).json({ 
-        error: "Email service not configured. Please add EMAIL_USER and EMAIL_PASS to your environment variables." 
+        error: `Configuration Missing: Please add ${missing.join(" and ")} to your Environment Variables in Settings.` 
       });
     }
 
     try {
-      // Configure transporter with a timeout
+      // Configure transporter for Gmail
       const transporter = nodemailer.createTransport({
         service: "gmail",
-        host: "smtp.gmail.com",
-        port: 465,
-        secure: true,
         auth: {
           user: process.env.EMAIL_USER,
           pass: process.env.EMAIL_PASS,
         },
-        connectionTimeout: 10000, // 10 seconds timeout
       });
 
       const mailOptions = {
