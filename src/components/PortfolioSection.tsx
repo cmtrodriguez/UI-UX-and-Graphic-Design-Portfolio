@@ -40,7 +40,7 @@ export const PortfolioSection = () => {
               whileInView={{ opacity: 1, x: 0 }}
               className="text-4xl md:text-7xl font-bold tracking-tighter mb-4"
             >
-              selected <span className="text-gradient-heatmap">works</span>
+              SELECTED <span className="text-gradient-heatmap">WORKS</span>
             </motion.h2>
             <p className="text-lg opacity-60 max-w-md dark:text-white/60">
               A collection of projects that define my creative journey and technical expertise.

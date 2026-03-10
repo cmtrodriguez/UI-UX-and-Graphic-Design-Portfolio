@@ -7,6 +7,7 @@ import dotenv from "dotenv";
 import multer from "multer";
 import fs from "fs";
 import { createClient } from "@supabase/supabase-js";
+import nodemailer from "nodemailer";
 
 dotenv.config();
 
@@ -278,6 +279,48 @@ async function startServer() {
     const stmt = db.prepare("DELETE FROM projects WHERE id = ?");
     stmt.run(req.params.id);
     res.json({ success: true });
+  });
+
+  app.post("/api/contact", async (req, res) => {
+    const { name, email, subject, message } = req.body;
+
+    if (!name || !email || !message) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    try {
+      // Configure transporter
+      // Note: For Gmail, you need to use an App Password if 2FA is enabled
+      const transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS,
+        },
+      });
+
+      const mailOptions = {
+        from: `"${name}" <${email}>`,
+        to: "rodriguez.cmt7@gmail.com",
+        subject: subject || `New Contact Form Submission from ${name}`,
+        text: `Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`,
+        html: `
+          <h3>New Contact Form Submission</h3>
+          <p><strong>Name:</strong> ${name}</p>
+          <p><strong>Email:</strong> ${email}</p>
+          <p><strong>Subject:</strong> ${subject || 'N/A'}</p>
+          <br/>
+          <p><strong>Message:</strong></p>
+          <p>${message.replace(/\n/g, '<br/>')}</p>
+        `,
+      };
+
+      await transporter.sendMail(mailOptions);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Email sending error:", error);
+      res.status(500).json({ error: "Failed to send email. Please try again later." });
+    }
   });
 
   // Vite middleware for development

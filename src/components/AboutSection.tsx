@@ -43,7 +43,7 @@ export const AboutSection = () => {
               whileInView={{ opacity: 1, y: 0 }}
             >
               <h2 className="text-4xl md:text-7xl font-bold tracking-tighter mb-6">
-                about <span className="text-gradient-heatmap">me</span>
+                ABOUT <span className="text-gradient-heatmap">ME</span>
               </h2>
               <p className="text-xl leading-relaxed opacity-80">
                 Hello! My name is Christian. I'm a Computer Science student with strong strengths in UI/UX, digital platforms, and business-focused problem solving. I design user-centered solutions across healthcare, compliance, and e-commerce.
