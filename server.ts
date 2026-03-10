@@ -110,9 +110,20 @@ async function startServer() {
   });
 
   app.post("/api/projects", upload.single("imageFile"), async (req, res) => {
+    console.log("POST /api/projects received", {
+      hasFile: !!req.file,
+      hasBody: !!req.body,
+      passwordMatch: req.body?.password === process.env.ADMIN_PASSWORD
+    });
+
     const { password, project: projectJson } = req.body;
     if (password !== process.env.ADMIN_PASSWORD) {
-      return res.status(401).json({ error: "Unauthorized" });
+      console.warn("Unauthorized project upload attempt");
+      return res.status(401).json({ error: "Unauthorized: Invalid password" });
+    }
+
+    if (!projectJson) {
+      return res.status(400).json({ error: "Missing project data" });
     }
 
     const project = JSON.parse(projectJson);
@@ -120,6 +131,7 @@ async function startServer() {
 
     if (supabase && req.file) {
       try {
+        console.log("Uploading to Supabase Storage...");
         const file = req.file;
         const fileExt = path.extname(file.originalname);
         const fileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${fileExt}`;
@@ -131,16 +143,20 @@ async function startServer() {
             upsert: false
           });
 
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.error("Supabase storage error:", uploadError);
+          throw uploadError;
+        }
 
         const { data: { publicUrl } } = supabase.storage
           .from('portfolio')
           .getPublicUrl(fileName);
           
         imagePath = publicUrl;
+        console.log("Supabase upload successful:", imagePath);
       } catch (e) {
         console.error("Supabase upload error:", e);
-        return res.status(500).json({ error: "Failed to upload to Supabase Storage" });
+        return res.status(500).json({ error: `Failed to upload to Supabase Storage: ${e.message || 'Unknown error'}` });
       }
     } else if (req.file) {
       imagePath = `/uploads/${req.file.filename}`;
@@ -150,6 +166,7 @@ async function startServer() {
 
     if (supabase) {
       try {
+        console.log("Inserting into Supabase Database...");
         const { error } = await supabase.from('projects').insert([{
           id, title, category, description, 
           tools: JSON.stringify(tools), 
@@ -159,15 +176,20 @@ async function startServer() {
           status: status || 'Published', 
           case_study_content
         }]);
-        if (error) throw error;
+        if (error) {
+          console.error("Supabase database error:", error);
+          throw error;
+        }
+        console.log("Supabase insert successful");
         return res.json({ success: true });
       } catch (e) {
         console.error("Supabase insert error:", e);
-        // Fallback to SQLite
+        return res.status(500).json({ error: `Failed to insert into Supabase: ${e.message || 'Unknown error'}` });
       }
     }
 
     // SQLite Fallback
+    console.log("Falling back to SQLite...");
     const stmt = db.prepare(`
       INSERT INTO projects (id, title, category, description, tools, tags, image, color, status, case_study_content)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -177,6 +199,7 @@ async function startServer() {
       stmt.run(id, title, category, description, JSON.stringify(tools), JSON.stringify(tags || []), imagePath, color, status || 'Published', case_study_content);
       res.json({ success: true });
     } catch (e) {
+      console.error("SQLite insert error:", e);
       res.status(500).json({ error: e.message });
     }
   });

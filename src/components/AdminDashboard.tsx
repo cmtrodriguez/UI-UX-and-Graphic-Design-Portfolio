@@ -91,7 +91,8 @@ export const AdminDashboard = () => {
         case_study_content: ''
       });
     } else {
-      alert('Failed to add project. Check password.');
+      const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
+      alert(`Failed to add project: ${errorData.error || 'Check password or server logs.'}`);
     }
   };
 
