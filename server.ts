@@ -15,7 +15,24 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Initialize Supabase if credentials are provided
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
-const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+
+// Validate Supabase configuration
+const isPlaceholderUrl = supabaseUrl?.includes("cruxd.supabase.co");
+const isValidUrl = supabaseUrl && supabaseUrl.startsWith("https://");
+
+const supabase = (isValidUrl && !isPlaceholderUrl && supabaseKey) 
+  ? createClient(supabaseUrl, supabaseKey) 
+  : null;
+
+if (isPlaceholderUrl) {
+  console.warn("⚠️ SUPABASE_URL is still using the placeholder 'cruxd'. Please update it in your environment variables.");
+} else if (supabaseUrl && !isValidUrl) {
+  console.warn("⚠️ SUPABASE_URL is invalid. It should start with 'https://'.");
+} else if (supabase) {
+  console.log("✅ Supabase client initialized successfully.");
+} else {
+  console.log("ℹ️ Supabase not configured. Running in Local Mode (SQLite + Local Storage).");
+}
 
 // Initialize SQLite as fallback
 const db = new Database("portfolio.db");
@@ -63,6 +80,15 @@ async function startServer() {
   app.use("/uploads", express.static("uploads"));
 
   // API Routes
+  app.get("/api/config-status", (req, res) => {
+    res.json({
+      supabaseEnabled: !!supabase,
+      isPlaceholder: isPlaceholderUrl,
+      isValidUrl: isValidUrl,
+      hasKey: !!supabaseKey
+    });
+  });
+
   app.post("/api/verify-password", (req, res) => {
     const { password } = req.body;
     if (password === process.env.ADMIN_PASSWORD) {
@@ -156,7 +182,11 @@ async function startServer() {
         console.log("Supabase upload successful:", imagePath);
       } catch (e) {
         console.error("Supabase upload error:", e);
-        return res.status(500).json({ error: `Failed to upload to Supabase Storage: ${e.message || 'Unknown error'}` });
+        let errorMessage = e.message || 'Unknown error';
+        if (errorMessage.includes('ENOTFOUND')) {
+          errorMessage = "Could not connect to Supabase. Your SUPABASE_URL might be incorrect or have a typo.";
+        }
+        return res.status(500).json({ error: `Failed to upload to Supabase Storage: ${errorMessage}` });
       }
     } else if (req.file) {
       imagePath = `/uploads/${req.file.filename}`;
@@ -184,7 +214,11 @@ async function startServer() {
         return res.json({ success: true });
       } catch (e) {
         console.error("Supabase insert error:", e);
-        return res.status(500).json({ error: `Failed to insert into Supabase: ${e.message || 'Unknown error'}` });
+        let errorMessage = e.message || 'Unknown error';
+        if (errorMessage.includes('ENOTFOUND')) {
+          errorMessage = "Could not connect to Supabase. Your SUPABASE_URL might be incorrect or have a typo.";
+        }
+        return res.status(500).json({ error: `Failed to insert into Supabase: ${errorMessage}` });
       }
     }
 

@@ -31,12 +31,24 @@ export const AdminDashboard = () => {
   });
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [configStatus, setConfigStatus] = useState<any>(null);
 
   useEffect(() => {
+    fetchConfigStatus();
     if (isLoggedIn) {
       fetchProjects();
     }
   }, [isLoggedIn]);
+
+  const fetchConfigStatus = async () => {
+    try {
+      const res = await fetch('/api/config-status');
+      const data = await res.json();
+      setConfigStatus(data);
+    } catch (e) {
+      console.error("Failed to fetch config status");
+    }
+  };
 
   const fetchProjects = async () => {
     const res = await fetch('/api/projects?admin=true');
@@ -183,6 +195,23 @@ export const AdminDashboard = () => {
     <div className="min-h-screen bg-heatmap-light dark:bg-black p-4 md:p-8 pt-24 transition-colors duration-500">
       <div className="container mx-auto max-w-7xl">
         
+        {/* Config Warning */}
+        {configStatus && (!configStatus.supabaseEnabled || configStatus.isPlaceholder) && (
+          <div className="mb-8 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-2xl flex items-center gap-4 text-yellow-500">
+            <div className="p-2 bg-yellow-500/20 rounded-full">
+              <AlertCircle size={24} />
+            </div>
+            <div>
+              <h3 className="font-bold">Database Configuration Issue</h3>
+              <p className="text-sm opacity-80">
+                {configStatus.isPlaceholder 
+                  ? "Your SUPABASE_URL is still using the placeholder 'cruxd'. Please update it in Render."
+                  : "Supabase is not configured. Your projects are being saved locally in a temporary database."}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-6">
           <div>
