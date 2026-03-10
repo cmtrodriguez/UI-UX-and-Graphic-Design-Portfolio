@@ -301,45 +301,71 @@ async function startServer() {
     }
 
     try {
-      // Configure transporter for Gmail
+      console.log(`Attempting to send email from: ${process.env.EMAIL_USER}`);
+      
+      // Configure transporter for Gmail with explicit settings
       const transporter = nodemailer.createTransport({
-        service: "gmail",
+        host: "smtp.gmail.com",
+        port: 465,
+        secure: true, // use SSL
         auth: {
           user: process.env.EMAIL_USER,
           pass: process.env.EMAIL_PASS,
         },
+        debug: true, // Show debug output in server logs
+        logger: true // Log information in server logs
       });
 
+      // Verify connection configuration
+      try {
+        await transporter.verify();
+        console.log("SMTP Connection verified successfully");
+      } catch (verifyError) {
+        console.error("SMTP Verification Failed:", verifyError);
+        throw new Error(`Connection Failed: ${verifyError.message}`);
+      }
+
       const mailOptions = {
-        from: `"${name}" <${process.env.EMAIL_USER}>`, // Gmail often requires the 'from' to be the authenticated user
-        replyTo: email, // This allows you to click 'Reply' in your email to respond to the sender
+        from: `"Portfolio Contact" <${process.env.EMAIL_USER}>`,
+        replyTo: email,
         to: "rodriguez.cmt7@gmail.com",
         subject: subject || `New Contact Form Submission from ${name}`,
         text: `Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`,
         html: `
-          <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-            <h2 style="color: #333;">New Contact Form Submission</h2>
-            <p><strong>Name:</strong> ${name}</p>
-            <p><strong>Email:</strong> ${email}</p>
-            <p><strong>Subject:</strong> ${subject || 'N/A'}</p>
+          <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #333; border-bottom: 2px solid #f27d26; padding-bottom: 10px;">New Contact Form Submission</h2>
+            <div style="margin-top: 20px;">
+              <p><strong>Name:</strong> ${name}</p>
+              <p><strong>Email:</strong> <a href="mailto:${email}">${email}</a></p>
+              <p><strong>Subject:</strong> ${subject || 'N/A'}</p>
+            </div>
             <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
             <p><strong>Message:</strong></p>
-            <p style="white-space: pre-wrap; line-height: 1.6;">${message}</p>
+            <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; white-space: pre-wrap; line-height: 1.6; color: #444;">${message}</div>
+            <p style="font-size: 12px; color: #999; margin-top: 30px; text-align: center;">Sent from your Portfolio Website</p>
           </div>
         `,
       };
 
-      await transporter.sendMail(mailOptions);
+      const info = await transporter.sendMail(mailOptions);
+      console.log("Email sent successfully:", info.messageId);
       res.json({ success: true });
     } catch (error) {
-      console.error("Email sending error:", error);
-      let msg = "Failed to send email.";
-      if (error.code === 'EAUTH') {
-        msg = "Email authentication failed. Please check your EMAIL_PASS (App Password).";
-      } else if (error.code === 'ETIMEDOUT') {
-        msg = "Connection timed out. Please try again.";
+      console.error("Detailed Email Error:", error);
+      
+      let userFriendlyMessage = "Failed to send email.";
+      
+      if (error.message.includes("Connection Failed")) {
+        userFriendlyMessage = `Connection Error: ${error.message}`;
+      } else if (error.code === 'EAUTH') {
+        userFriendlyMessage = "Authentication Failed: Please double-check your App Password. Ensure it's the 16-character code from Google.";
+      } else if (error.code === 'ESOCKET') {
+        userFriendlyMessage = "Network Error: Could not connect to Gmail. Please try again in a few moments.";
+      } else {
+        userFriendlyMessage = `Error: ${error.message || "Unknown error occurred"}`;
       }
-      res.status(500).json({ error: msg });
+      
+      res.status(500).json({ error: userFriendlyMessage });
     }
   });
 
