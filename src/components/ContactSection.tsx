@@ -13,8 +13,7 @@ export const ContactSection = () => {
               initial={{ opacity: 0, x: -20 }}
               whileInView={{ opacity: 1, x: 0 }}
               className="text-4xl md:text-8xl font-bold tracking-tighter mb-8"
-            >
-              LET'S <span className="text-gradient-heatmap">CONNECT</span>
+            >let's <span className="text-gradient-heatmap">connect!</span>
             </motion.h2>
             <p className="text-xl opacity-60 mb-12 max-w-md">
               Have a project in mind or just want to say hi? I'm always open to new opportunities and collaborations.
