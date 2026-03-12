@@ -25,7 +25,14 @@ export const ContactSection = () => {
         body: JSON.stringify(formData)
       });
 
-      const data = await res.json();
+      let data;
+      const contentType = res.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        throw new Error(text.slice(0, 100) || 'Server returned a non-JSON response');
+      }
 
       if (res.ok) {
         setStatus('success');

@@ -9,9 +9,11 @@ import fs from "fs";
 import { createClient } from "@supabase/supabase-js";
 import nodemailer from "nodemailer";
 
-dotenv.config();
-
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+if (fs.existsSync(path.join(__dirname, ".env"))) {
+  dotenv.config();
+}
 
 // Initialize Supabase if credentials are provided
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -91,7 +93,14 @@ app.get("/api/config-status", (req, res) => {
 
 app.post("/api/verify-password", (req, res) => {
   const { password } = req.body;
-  if (password === process.env.ADMIN_PASSWORD) {
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  
+  if (!adminPassword) {
+    console.error("ADMIN_PASSWORD is not set in environment variables");
+    return res.status(500).json({ error: "Server configuration error: ADMIN_PASSWORD is not set." });
+  }
+
+  if (password?.trim() === adminPassword.trim()) {
     res.json({ success: true });
   } else {
     res.status(401).json({ error: "Invalid password" });
@@ -288,10 +297,13 @@ app.post("/api/contact", async (req, res) => {
   }
 
   // Check if email service is configured
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+  const emailUser = process.env.EMAIL_USER;
+  const emailPass = process.env.EMAIL_PASS;
+
+  if (!emailUser || !emailPass) {
     const missing = [];
-    if (!process.env.EMAIL_USER) missing.push("EMAIL_USER");
-    if (!process.env.EMAIL_PASS) missing.push("EMAIL_PASS");
+    if (!emailUser) missing.push("EMAIL_USER");
+    if (!emailPass) missing.push("EMAIL_PASS");
     
     console.error(`Contact Form Error: Missing ${missing.join(", ")}`);
     return res.status(500).json({ 
@@ -300,7 +312,7 @@ app.post("/api/contact", async (req, res) => {
   }
 
   try {
-    console.log(`Attempting to send email from: ${process.env.EMAIL_USER}`);
+    console.log(`Attempting to send email from: ${emailUser}`);
     
     // Configure transporter for Gmail with explicit settings
     const transporter = nodemailer.createTransport({
@@ -308,8 +320,8 @@ app.post("/api/contact", async (req, res) => {
       port: 465,
       secure: true, // use SSL
       auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
+        user: emailUser.trim(),
+        pass: emailPass.trim(),
       },
       debug: true, // Show debug output in server logs
       logger: true // Log information in server logs
@@ -366,6 +378,16 @@ app.post("/api/contact", async (req, res) => {
     
     res.status(500).json({ error: userFriendlyMessage });
   }
+});
+
+// Error handling middleware
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error("Global Error Handler:", err);
+  res.status(500).json({ 
+    error: "Internal Server Error", 
+    message: err.message || "An unexpected error occurred",
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
 });
 
 async function startServer() {

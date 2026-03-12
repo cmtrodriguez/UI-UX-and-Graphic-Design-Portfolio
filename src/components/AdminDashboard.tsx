@@ -67,7 +67,8 @@ export const AdminDashboard = () => {
     if (res.ok) {
       setIsLoggedIn(true);
     } else {
-      alert('Invalid admin password. Please check your environment variables.');
+      const data = await res.json().catch(() => ({ error: 'Invalid password' }));
+      alert(data.error || 'Invalid admin password. Please check your environment variables.');
     }
   };
 
