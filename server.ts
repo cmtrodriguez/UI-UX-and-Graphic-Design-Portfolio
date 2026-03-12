@@ -48,7 +48,7 @@ if (!fs.existsSync(uploadsDir)) {
 // Configure multer - use memory storage for Supabase, disk for local
 const storage = supabase ? multer.memoryStorage() : multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/");
+    cb(null, uploadsDir);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
@@ -77,7 +77,7 @@ db.exec(`
 const app = express();
 
 app.use(express.json());
-app.use("/uploads", express.static("uploads"));
+app.use("/uploads", express.static(uploadsDir));
 
 // API Routes
 app.get("/api/config-status", (req, res) => {

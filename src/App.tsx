@@ -81,7 +81,7 @@ const MainSite = () => (
       </motion.div>
       <div className="flex flex-col items-center gap-4">
         <Logo className="w-12 h-12" />
-        <p className="text-[10px] font-bold uppercase tracking-[0.5em] opacity-30 dark:text-white/30">
+        <p className="text-[10px] font-bold uppercase tracking-[0.5em] opacity-30 dark:text-white dark:opacity-100">
           Designed & Built with Passion
         </p>
       </div>
